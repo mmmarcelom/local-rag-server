@@ -1,73 +1,119 @@
-from services.rag_system import RAGSystem
-from services.supabase_manager import SupabaseManager
-from services.wts_api import WtsAPIService
 from fastapi import BackgroundTasks
+from models.schemas import IncomingMessage, OutgoingMessage, WtsWebhookMessage, convert_wts_webhook_to_incoming_message
+from config import get_supabase_manager, get_rag_system, get_external_api
 
-supabase_manager = SupabaseManager()
-rag_system = RAGSystem()
-external_api = WtsAPIService()
-
-async def process_message_background(message, conversation_id):
+async def process_message(message: IncomingMessage, conversation_id):
     """Processa mensagem em background"""
+    # Obter instâncias
+    supabase_manager = get_supabase_manager()
+    rag_system = get_rag_system()
+    external_api = get_external_api()
+    
+    # 1. Buscar histórico
     try:
-        # 3. Buscar histórico
+        print("Recuperando histórico de conversa...", end="")
         history = await supabase_manager.get_conversation_history(conversation_id)
-        print('history: \n', '\n'.join([msg['message'] for msg in history]))
-
-        # 4. Recuperar contexto
-        context = await rag_system.retrieve_context(message.message, history)
-        print('context:', context)
-
-        # 5. Gerar resposta
-        resposta = await rag_system.generate_response(message.message, context, history)
-        print('resposta:', resposta)
-
-        # 6. Salvar resposta
-        await supabase_manager.save_message(conversation_id, message.phone_number, resposta, "outgoing")
-
-        # 7. Enviar resposta via API externa
-        await external_api.send_message(message.phone_number, resposta)
-        
-        print(f"Resposta enviada para {message.phone_number}")
-        
+        print('OK')
     except Exception as e:
         print(f"Erro no processamento em background: {e}")
-
-async def receive_message(message, background_tasks: BackgroundTasks):
-    print('mensagem recebida', message.json())
-
-    phone_number = message.phone_number
-    user_name = message.user_name
-    message_id = message.message_id
-
-    # 1. Buscar ou criar conversa
-    conversation_id = await supabase_manager.get_or_create_conversation(phone_number, user_name)
-
-    # 2. Salvar mensagem recebida
-    await supabase_manager.save_message(conversation_id, phone_number, message.message, "incoming", message_id)
-
-    # 3. Adicionar processamento em background
-    background_tasks.add_task(process_message_background, message, conversation_id)
-
-    return {"status": "success", "message": "Mensagem adicionada para processamento em background"}
-
-async def get_conversation(phone_number: str):
-    """Recupera histórico de conversa por número de telefone"""
+        return
+    
+    # 2. Recuperar contexto
     try:
-        # Buscar conversa
-        result = supabase_manager.supabase.table("conversations").select("*").eq("phone_number", phone_number).order("created_at", desc=True).limit(1).execute()
-        
-        if not result.data:
-            return {"conversation": None, "messages": []}
-        
-        conversation = result.data[0]
-        messages = await supabase_manager.get_conversation_history(conversation["id"], limit=50)
-        
-        return {
-            "conversation": conversation,
-            "messages": messages
-        }
+        print("Recuperando contexto...", end="")
+        context = await rag_system.retrieve_context(message.message, history)
+        print("OK")
+    except Exception as e:
+        print(f"Erro ao recuperar contexto: {e}")
+        return
+    
+    # 3. Gerar resposta
+    try:
+        print('Gerando resposta...', end="")
+        resposta = await rag_system.generate_response(message.message, context, history)
+        print('OK')
+    except Exception as e:
+        print(f"Erro ao gerar resposta: {e}")
+        return
+
+    # 5. Salvar resposta
+    try:
+        print("Salvando resposta...", end="")
+        await supabase_manager.save_message(conversation_id, message.phone_number, resposta, "outgoing")
+        print("OK")
+    except Exception as e:
+        print(f"Erro ao salvar resposta: {e}")
+        return
+
+    # 6. Enviar resposta
+    try:
+        print(f"Enviando resposta...", end="")
+        await external_api.send_message(message.phone_number, resposta)        
+        print('OK')
         
     except Exception as e:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Erro ao enviar resposta: {e}")
+        return
+
+async def receive_message(messageData: IncomingMessage, background_tasks: BackgroundTasks):
+    print('mensagem recebida')
+
+    # Obter instâncias
+    supabase_manager = get_supabase_manager()
+
+    try:
+        # 1. Buscar ou criar conversa
+        conversation_id = await supabase_manager.get_or_create_conversation(
+            messageData.phone_number, 
+            messageData.user_name
+        )
+
+        # 2. Salvar mensagem recebida
+        await supabase_manager.save_message(
+            conversation_id, 
+            messageData.phone_number, 
+            messageData.message, 
+            "incoming", 
+            messageData.message_id
+        )
+
+        # 3. Adicionar processamento em background
+        background_tasks.add_task(process_message, messageData, conversation_id)
+        return {"status": "success", "message": "Mensagem adicionada para processamento em background"}
+
+    except ConnectionError as e:
+        # Processar mensagem sem salvar no Supabase
+        print(f"Erro de conexão com Supabase: {e}")
+        background_tasks.add_task(process_message, messageData, "temp_conversation")
+        return {"status": "warning", "message": "Mensagem processada sem persistência no Supabase"}
+        
+    except Exception as e:
+        print(f"Erro ao processar mensagem: {e}")
+        return {"status": "error", "message": f"Erro ao processar mensagem: {str(e)}"}
+
+async def receive_wts_webhook(webhook_data: WtsWebhookMessage, background_tasks: BackgroundTasks):
+    """Recebe webhook do WTS e processa a mensagem"""
+    print('Webhook do WTS recebido')
+    
+    # Verificar se é uma mensagem recebida
+    if webhook_data.eventType != "MESSAGE_RECEIVED":
+        return {"status": "ignored", "message": f"Evento ignorado: {webhook_data.eventType}"}
+    
+    # Verificar se é uma mensagem de texto
+    if webhook_data.content.type != "TEXT":
+        return {"status": "ignored", "message": f"Tipo de mensagem ignorado: {webhook_data.content.type}"}
+    
+    # Verificar se é uma mensagem recebida (não enviada)
+    if webhook_data.content.direction != "FROM_HUB":
+        return {"status": "ignored", "message": f"Direção ignorada: {webhook_data.content.direction}"}
+    
+    # Converter webhook para formato interno
+    try:
+        message_data = convert_wts_webhook_to_incoming_message(webhook_data)
+        print(f"Mensagem convertida: {message_data.phone_number} - {message_data.message}")
+    except Exception as e:
+        print(f"Erro ao converter webhook: {e}")
+        return {"status": "error", "message": f"Erro ao converter webhook: {str(e)}"}
+    
+    # Processar mensagem usando a função existente
+    return await receive_message(message_data, background_tasks)

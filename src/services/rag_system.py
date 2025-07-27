@@ -6,25 +6,48 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
 import logging
 import httpx
-import asyncio
-
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
-MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
-OLLAMA_HOST = os.getenv("OLLAMA_HOST")
-OLLAMA_PORT = os.getenv("OLLAMA_PORT")
-OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 
 logger = logging.getLogger(__name__)
 
 class RAGSystem:
-    def __init__(self):
+    def __init__(self, ollama_url, ollama_model, qdrant_host, qdrant_port):
+        self.ollama_url = ollama_url
+        self.ollama_model = ollama_model
+        self.qdrant_host = qdrant_host
+        self.qdrant_port = qdrant_port
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.qdrant = None
         self.collection_name = "knowledge_base"
         self._initialize_qdrant()
+    
+    async def test_ollama_connection(self) -> bool:
+        """Testa a conexão com o Ollama"""
+        try:
+            logger.info("🧠 Testando conexão com Ollama...")
+            logger.info(f"URL do Ollama: {self.ollama_url}")
+            
+            # Testar se o Ollama está respondendo
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                try:
+                    logger.info("📡 Testando conectividade básica...")
+                    response = await client.get(f"{self.ollama_url}/api/tags")
+                    response.raise_for_status()
+                    logger.info("✅ Ollama está respondendo!")
+                except Exception as e:
+                    logger.error(f"❌ Ollama não está respondendo em {self.ollama_url}: {e}")
+                    logger.error("💡 Verifique se o Ollama está rodando: ollama serve")
+                    return False
+                    
+                logger.info("✅ Ollama conectado e funcionando!")
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Erro geral ao conectar com Ollama: {e}")
+            logger.error(f"💡 Verifique:")
+            logger.error(f"   1. Se o Ollama está rodando: ollama serve")
+            logger.error(f"   2. Se o modelo está baixado: ollama pull {self.ollama_model}")
+            logger.error(f"   3. Se a URL está correta: {self.ollama_url}")
+            return False
     
     def _initialize_qdrant(self):
         """Inicializa conexão com Qdrant de forma lazy"""
@@ -182,13 +205,12 @@ class RAGSystem:
             
             Resposta:
             """
-            
-            # Chamada assíncrona ao Ollama via load balancer
+
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    f"{OLLAMA_URL}/api/chat",
+                    f"{self.ollama_url}/api/chat",
                     json={
-                        "model": MODEL,
+                        "model": self.ollama_model,
                         "messages": [{"role": "user", "content": prompt}],
                         "options": {"temperature": 0.7}
                     }

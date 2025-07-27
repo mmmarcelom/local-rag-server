@@ -1,0 +1,33 @@
+{
+    "eventType": "MESSAGE_RECEIVED",
+    "date": "2025-07-27T23:46:00.1260435Z",
+    "content": {
+        "id": "facbd59c-5415-4c1c-a46c-26c4d4576863",
+        "senderId": null,
+        "createdAt": "2025-07-27T23:46:00.1040498Z",
+        "updatedAt": "2025-07-27T23:46:00.1040498Z",
+        "editedAt": null,
+        "type": "TEXT",
+        "active": true,
+        "sessionId": "8917bc7b-ab53-4e1c-940d-1fbd309bdabd",
+        "templateId": null,
+        "userId": null,
+        "timestamp": "2025-07-27T23:45:56Z",
+        "text": "Então... me fale sobre pendrives",
+        "direction": "FROM_HUB",
+        "status": "DELIVERED",
+        "origin": "GATEWAY",
+        "readContactAt": null,
+        "fileId": null,
+        "refId": null,
+        "waitingOptIn": false,
+        "details": {
+            "file": null,
+            "location": null,
+            "contact": null,
+            "errors": null,
+            "transcription": null
+        }
+    },
+    "changeMetadata": null
+}
