@@ -1,0 +1,56 @@
+# Dados e modelos grandes
+data/
+models/
+datasets/
+*.h5
+*.pkl
+*.bin
+*.safetensors
+*.ckpt
+*.pth
+
+# Cache e temporários
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+*.cover
+.hypothesis/
+
+# Desenvolvimento
+.git/
+.gitignore
+README.md
+*.md
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db

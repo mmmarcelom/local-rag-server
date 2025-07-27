@@ -1,0 +1,28 @@
+# Dependências essenciais para o servidor FastAPI
+fastapi==0.116.1
+uvicorn==0.35.0
+pydantic==2.11.7
+python-dotenv==1.1.1
+
+# Cliente Supabase
+supabase==2.17.0
+postgrest==1.1.1
+realtime==2.6.0
+
+# HTTP client para API externa
+httpx==0.28.1
+requests==2.32.4
+
+# Utilitários
+python-dateutil==2.9.0.post0
+
+# RAG
+qdrant-client
+numpy
+scikit-learn
+scipy
+transformers==4.54.0
+sentence-transformers==5.0.0
+huggingface-hub==0.34.1
+tokenizers==0.21.2
+safetensors==0.5.3 
