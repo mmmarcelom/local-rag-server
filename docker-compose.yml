@@ -1,5 +1,5 @@
+name: local-rag-infra
 services:
-  # Serviços de infraestrutura
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
@@ -19,121 +19,12 @@ services:
       - ./volumes/redis_data:/data
     networks:
       - local-rag-network
-
-  # Ollama único (para testes)
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
     ports:
       - "11434:11434"
     entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:latest && tail -f /dev/null"]
-    profiles:
-      - single-ollama
-    networks:
-      - local-rag-network
-
-  # Múltiplos containers Ollama (para produção)
-  ollama-1:
-    image: ollama/ollama:latest
-    container_name: ollama-1
-    ports:
-      - "11434:11434"
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:latest && tail -f /dev/null"]
-    profiles:
-      - multi-ollama
-    networks:
-      - local-rag-network
-
-  ollama-2:
-    image: ollama/ollama:latest
-    container_name: ollama-2
-    ports:
-      - "11435:11434"
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:latest && tail -f /dev/null"]
-    profiles:
-      - multi-ollama
-    networks:
-      - local-rag-network
-
-  ollama-3:
-    image: ollama/ollama:latest
-    container_name: ollama-3
-    ports:
-      - "11436:11434"
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:latest && tail -f /dev/null"]
-    profiles:
-      - multi-ollama
-    networks:
-      - local-rag-network
-
-  # Load Balancer (apenas para múltiplos Ollamas)
-  nginx:
-    image: nginx:alpine
-    container_name: ollama-lb
-    ports:
-      - "11437:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - ollama-1
-      - ollama-2
-      - ollama-3
-    profiles:
-      - multi-ollama
-    networks:
-      - local-rag-network
-
-  # Servidor FastAPI (inclui RAG) - Modo Teste
-  server-test:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
-    container_name: server-test
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      - WTS_API_TOKEN=${WTS_API_TOKEN}
-      - REDIS_HOST=${REDIS_HOST}
-      - QDRANT_HOST=${QDRANT_HOST}
-      - OLLAMA_HOST=ollama
-      - OLLAMA_PORT=11434
-    depends_on:
-      - redis
-      - qdrant
-      - ollama
-    profiles:
-      - single-ollama
-    networks:
-      - local-rag-network
-
-  # Servidor FastAPI (inclui RAG) - Modo Produção
-  server-prod:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - BUILDKIT_INLINE_CACHE=1
-    container_name: server-prod
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      - WTS_API_TOKEN=${WTS_API_TOKEN}
-      - REDIS_HOST=${REDIS_HOST}
-      - QDRANT_HOST=${QDRANT_HOST}
-      - OLLAMA_HOST=nginx
-      - OLLAMA_PORT=80
-    depends_on:
-      - redis
-      - qdrant
-      - nginx
-    profiles:
-      - multi-ollama
     networks:
       - local-rag-network
 

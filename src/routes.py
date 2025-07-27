@@ -30,7 +30,7 @@ async def health_check():
 
 @router.post("/message")
 async def receive_message_endpoint(message: IncomingMessage, background_tasks: BackgroundTasks):
-    print('mensagem recebida', message)
+    print('mensagem recebida no endpoint')
     result = await receive_message(message, background_tasks)
     return result
 

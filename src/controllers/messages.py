@@ -12,12 +12,15 @@ async def process_message_background(message, conversation_id):
     try:
         # 3. Buscar histórico
         history = await supabase_manager.get_conversation_history(conversation_id)
+        print('history: \n', '\n'.join([msg['message'] for msg in history]))
 
         # 4. Recuperar contexto
         context = await rag_system.retrieve_context(message.message, history)
+        print('context:', context)
 
         # 5. Gerar resposta
         resposta = await rag_system.generate_response(message.message, context, history)
+        print('resposta:', resposta)
 
         # 6. Salvar resposta
         await supabase_manager.save_message(conversation_id, message.phone_number, resposta, "outgoing")
@@ -46,7 +49,7 @@ async def receive_message(message, background_tasks: BackgroundTasks):
     # 3. Adicionar processamento em background
     background_tasks.add_task(process_message_background, message, conversation_id)
 
-    return {"status": "success", "message": "Mensagem recebida e será processada em background"}
+    return {"status": "success", "message": "Mensagem adicionada para processamento em background"}
 
 async def get_conversation(phone_number: str):
     """Recupera histórico de conversa por número de telefone"""
