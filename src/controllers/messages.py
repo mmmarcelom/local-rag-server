@@ -11,7 +11,7 @@ async def process_message(message: IncomingMessage, conversation_id):
     
     # 1. Buscar histórico
     try:
-        print("Recuperando histórico de conversa...", end="")
+        print(f"{message.phone_number} - Recuperando histórico de conversa...", end="")
         history = await supabase_manager.get_conversation_history(conversation_id)
         print('OK')
     except Exception as e:
@@ -20,7 +20,7 @@ async def process_message(message: IncomingMessage, conversation_id):
     
     # 2. Recuperar contexto
     try:
-        print("Recuperando contexto...", end="")
+        print(f"{message.phone_number} - Recuperando contexto...", end="")
         context = await rag_system.retrieve_context(message.message, history)
         print("OK")
     except Exception as e:
@@ -29,7 +29,7 @@ async def process_message(message: IncomingMessage, conversation_id):
     
     # 3. Gerar resposta
     try:
-        print('Gerando resposta...', end="")
+        print(f"{message.phone_number} - Gerando resposta...", end="")
         resposta = await rag_system.generate_response(message.message, context, history)
         print('OK')
     except Exception as e:
@@ -38,7 +38,7 @@ async def process_message(message: IncomingMessage, conversation_id):
 
     # 5. Salvar resposta
     try:
-        print("Salvando resposta...", end="")
+        print(f"{message.phone_number} - Salvando resposta...", end="")
         await supabase_manager.save_message(conversation_id, message.phone_number, resposta, "outgoing")
         print("OK")
     except Exception as e:
@@ -47,7 +47,7 @@ async def process_message(message: IncomingMessage, conversation_id):
 
     # 6. Enviar resposta
     try:
-        print(f"Enviando resposta...", end="")
+        print(f"{message.phone_number} - Enviando resposta...", end="")
         await external_api.send_message(message.phone_number, resposta)        
         print('OK')
         

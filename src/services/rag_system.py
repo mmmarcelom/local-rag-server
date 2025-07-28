@@ -6,6 +6,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
 import logging
 import httpx
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +19,44 @@ class RAGSystem:
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
         self.qdrant = None
         self.collection_name = "knowledge_base"
-        self._initialize_qdrant()
+        # Removida a inicialização lazy do construtor
     
+    async def initialize_qdrant(self) -> bool:
+        """Inicializa conexão com Qdrant de forma assíncrona"""
+        
+        warnings.filterwarnings("ignore", category=FutureWarning, module="torch.nn.modules.module")
+
+        try:
+            logger.info("🔍 Inicializando Qdrant...")
+            logger.info(f"Host: {self.qdrant_host}, Port: {self.qdrant_port}")
+            
+            self.qdrant = QdrantClient(host=self.qdrant_host, port=self.qdrant_port)
+            
+            # Testar conexão
+            collections = self.qdrant.get_collections()
+            logger.info(f"Conexão com Qdrant estabelecida. Coleções: {[c.name for c in collections.collections]}")
+            
+            # Verificar se a coleção existe
+            if self.collection_name not in [c.name for c in collections.collections]:
+                logger.info(f"Criando coleção '{self.collection_name}'...")
+                self.qdrant.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+                )
+                logger.info(f"Coleção '{self.collection_name}' criada com sucesso")
+            else:
+                logger.info(f"Coleção '{self.collection_name}' já existe")
+                
+            logger.info("✅ Qdrant inicializado com sucesso")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao inicializar Qdrant: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            self.qdrant = None
+            return False
+
     async def test_ollama_connection(self) -> bool:
         """Testa a conexão com o Ollama"""
         try:
@@ -43,47 +80,13 @@ class RAGSystem:
                 
         except Exception as e:
             logger.error(f"❌ Erro geral ao conectar com Ollama: {e}")
-            logger.error(f"💡 Verifique:")
-            logger.error(f"   1. Se o Ollama está rodando: ollama serve")
-            logger.error(f"   2. Se o modelo está baixado: ollama pull {self.ollama_model}")
-            logger.error(f"   3. Se a URL está correta: {self.ollama_url}")
             return False
-    
-    def _initialize_qdrant(self):
-        """Inicializa conexão com Qdrant de forma lazy"""
-        try:
-            logger.info("Tentando conectar ao Qdrant...")
-            self.qdrant = QdrantClient(host="localhost", port=6333)
-            
-            # Testar conexão
-            collections = self.qdrant.get_collections()
-            logger.info(f"Conexão com Qdrant estabelecida. Coleções: {[c.name for c in collections.collections]}")
-            
-            # Verificar se a coleção existe
-            if self.collection_name not in [c.name for c in collections.collections]:
-                logger.info(f"Criando coleção '{self.collection_name}'...")
-                self.qdrant.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=VectorParams(size=384, distance=Distance.COSINE)
-                )
-                logger.info(f"Coleção '{self.collection_name}' criada com sucesso")
-            else:
-                logger.info(f"Coleção '{self.collection_name}' já existe")
-                
-            logger.info("Qdrant inicializado com sucesso")
-        except Exception as e:
-            logger.error(f"Erro ao inicializar Qdrant: {e}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            self.qdrant = None
 
     async def add_documents_to_rag(self, documents: List[str], metadatas: List[Dict] = None):
         try:
             if not self.qdrant:
-                self._initialize_qdrant()
-                if not self.qdrant:
-                    logger.error("Não foi possível conectar ao Qdrant")
-                    return
+                logger.error("Qdrant não foi inicializado. Chame initialize_qdrant() primeiro.")
+                return
             
             embeddings = self.embedding_model.encode(documents).tolist()
             points = [
@@ -108,11 +111,8 @@ class RAGSystem:
             
             # Verificar se o Qdrant está disponível
             if not self.qdrant:
-                logger.info("Qdrant não inicializado, tentando inicializar...")
-                self._initialize_qdrant()
-                if not self.qdrant:
-                    logger.error("Não foi possível conectar ao Qdrant")
-                    return []
+                logger.error("Qdrant não foi inicializado. Chame initialize_qdrant() primeiro.")
+                return []
             
             # Verificar se a coleção existe
             try:
@@ -200,6 +200,7 @@ class RAGSystem:
             - Use o conhecimento fornecido quando relevante
             - Mantenha o contexto da conversa
             - Se não souber algo, seja honesto
+            - Não cumprimente o cliente, não diga "olá", "olá novamente" ou qualquer outra forma de cumprimento
             - Responda em português brasileiro
             - Mantenha o tom conversacional e profissional
             

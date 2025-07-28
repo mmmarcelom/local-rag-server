@@ -28,16 +28,16 @@ OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 WTS_API_TOKEN = os.getenv("WTS_API_TOKEN")
 
 # Configurações do Qdrant
-QDRANT_HOST = os.getenv("QDRANT_HOST")
-QDRANT_PORT = os.getenv("QDRANT_PORT")
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
 # Configurações do Redis
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = os.getenv("REDIS_PORT")
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 
 # Configurações do servidor
-SERVER_HOST = os.getenv("SERVER_HOST")
-SERVER_PORT = int(os.getenv("SERVER_PORT"))
+SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
+SERVER_PORT = int(os.getenv("SERVER_PORT", "8000"))
 
 _supabase_manager = None
 _rag_system = None
@@ -69,7 +69,7 @@ def get_external_api() -> WtsAPIService:
         _external_api = WtsAPIService(WTS_API_TOKEN)
     return _external_api
 
-def validate_config():
+def validate_env():
     """Valida se todas as configurações necessárias estão presentes"""
     errors = []
     
@@ -81,6 +81,13 @@ def validate_config():
     
     if not WTS_API_TOKEN:
         errors.append("WTS_API_TOKEN não configurado")
+    
+    # Validar configurações do Qdrant
+    if not QDRANT_HOST:
+        errors.append("QDRANT_HOST não configurado")
+    
+    if not QDRANT_PORT:
+        errors.append("QDRANT_PORT não configurado")
     
     if errors:
         raise ValueError(f"Configurações inválidas: {'; '.join(errors)}")

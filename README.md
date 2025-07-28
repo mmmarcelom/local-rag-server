@@ -45,6 +45,10 @@ Configure as seguintes variáveis no arquivo `.env`:
 # Configurações do WhatsApp API (WTS.chat) - OBRIGATÓRIO
 WTS_API_TOKEN=your_wts_api_token_here
 
+# Configurações do Supabase (OBRIGATÓRIO)
+SUPABASE_PUBLIC_URL=your_supabase_url_here
+ANON_KEY=your_supabase_anon_key_here
+
 # As outras configurações já vêm com valores padrão para desenvolvimento
 ```
 
@@ -247,17 +251,29 @@ docker system df
 
 ### **Variáveis de Ambiente (.env)**
 ```bash
-# Supabase
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_key
+# Supabase (OBRIGATÓRIO)
+SUPABASE_PUBLIC_URL=your_supabase_url
+ANON_KEY=your_supabase_key
 
-# WhatsApp API
+# WhatsApp API (OBRIGATÓRIO)
 WTS_API_TOKEN=your_wts_token
 
 # Ollama
 OLLAMA_MODEL=llama3.2
 OLLAMA_HOST=ollama  # ou nginx para produção
 OLLAMA_PORT=11434   # ou 80 para produção
+
+# Qdrant
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Servidor
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8000
 ```
 
 ### **Portas Utilizadas**
@@ -282,12 +298,65 @@ docker-compose ps
 
 # Verificar logs de inicialização
 docker-compose logs --tail=50
+
+# Teste completo de todos os serviços (script local)
+python test_all_services.py
+
+# Teste via API (retorna JSON detalhado)
+curl http://localhost:8000/test-services
 ```
 
 ### **Teste de Carga**
 ```bash
 # Executar teste de performance
 python monitor_load.py
+```
+
+### **Teste Assíncrono de Serviços**
+```bash
+# Teste completo com análise detalhada
+python test_all_services.py
+
+# Teste via API (JSON response)
+curl http://localhost:8000/test-services
+
+# Teste de health check básico
+curl http://localhost:8000/health
+```
+
+**Exemplo de resposta do teste assíncrono:**
+```json
+{
+  "timestamp": "2024-01-15T10:30:00",
+  "overall_status": "healthy",
+  "services": {
+    "supabase": {
+      "status": "success",
+      "message": "Serviço funcionando",
+      "success": true
+    },
+    "qdrant": {
+      "status": "success", 
+      "message": "Serviço funcionando",
+      "success": true
+    },
+    "ollama": {
+      "status": "success",
+      "message": "Serviço funcionando", 
+      "success": true
+    },
+    "wts_api": {
+      "status": "success",
+      "message": "Serviço funcionando",
+      "success": true
+    }
+  },
+  "summary": {
+    "total_services": 4,
+    "successful_services": 4,
+    "failed_services": 0
+  }
+}
 ```
 
 ## 📊 Performance
@@ -350,8 +419,11 @@ docker-compose build --no-cache && docker-compose --profile single-ollama up -d
 - [ ] Docker instalado e funcionando
 - [ ] Arquivo `.env` criado e configurado
 - [ ] Token WTS.chat configurado no `.env`
+- [ ] Configurações do Supabase configuradas no `.env`
 - [ ] Containers iniciados com sucesso (`docker-compose ps`)
 - [ ] API acessível em http://localhost:8000/docs
+- [ ] Qdrant acessível em http://localhost:6333/collections
+- [ ] Ollama acessível em http://localhost:11434/api/tags
 - [ ] Logs sem erros críticos (`docker-compose logs`)
 
 ## ⚠️ Pré-requisitos Importantes

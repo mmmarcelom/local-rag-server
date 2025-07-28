@@ -4,6 +4,7 @@ from datetime import datetime
 from controllers.messages import receive_message
 from models.schemas import IncomingMessage
 from config import get_supabase_manager, get_rag_system, get_external_api
+import asyncio
 
 router = APIRouter()
 
@@ -19,7 +20,8 @@ async def hello():
             "webhook": "/webhook/wts",
             "conversation": "/conversation/{phone_number}",
             "knowledge": "/knowledge",
-            "health": "/health"
+            "health": "/health",
+            "test_services": "/test-services"
         }
     }
 
@@ -56,6 +58,78 @@ async def health_check():
             "services": {
                 "supabase": "unknown",
                 "ollama": "unknown"
+            }
+        }
+
+@router.get("/test-services")
+async def test_all_services():
+    """Testa todos os serviços de forma assíncrona e retorna resultados detalhados"""
+    try:
+        # Obter instâncias
+        supabase_manager = get_supabase_manager()
+        rag_system = get_rag_system()
+        external_api = get_external_api()
+        
+        # Definir todas as tarefas de teste com timeouts
+        tasks = {
+            "supabase": asyncio.wait_for(supabase_manager.initialize(), timeout=30),
+            "qdrant": asyncio.wait_for(rag_system.initialize_qdrant(), timeout=30),
+            "ollama": asyncio.wait_for(rag_system.test_ollama_connection(), timeout=30),
+            "wts_api": asyncio.wait_for(external_api.test_connection(), timeout=30)
+        }
+        
+        # Executar todas as tarefas em paralelo
+        task_results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        
+        # Mapear resultados
+        results = {}
+        all_success = True
+        
+        for service_name, result in zip(tasks.keys(), task_results):
+            if isinstance(result, asyncio.TimeoutError):
+                results[service_name] = {
+                    "status": "timeout",
+                    "message": "Timeout após 30s",
+                    "success": False
+                }
+                all_success = False
+            elif isinstance(result, Exception):
+                results[service_name] = {
+                    "status": "error",
+                    "message": str(result),
+                    "success": False
+                }
+                all_success = False
+            else:
+                results[service_name] = {
+                    "status": "success" if result else "failed",
+                    "message": "Serviço funcionando" if result else "Serviço não respondeu",
+                    "success": bool(result)
+                }
+                if not result:
+                    all_success = False
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "overall_status": "healthy" if all_success else "unhealthy",
+            "services": results,
+            "summary": {
+                "total_services": len(results),
+                "successful_services": sum(1 for r in results.values() if r["success"]),
+                "failed_services": sum(1 for r in results.values() if not r["success"])
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "overall_status": "error",
+            "error": str(e),
+            "services": {},
+            "summary": {
+                "total_services": 0,
+                "successful_services": 0,
+                "failed_services": 0
             }
         }
 
