@@ -1,5 +1,5 @@
 from fastapi import BackgroundTasks
-from models.schemas import IncomingMessage, OutgoingMessage, WtsWebhookMessage, convert_wts_webhook_to_incoming_message
+from models.schemas import IncomingMessage
 from config import get_supabase_manager, get_rag_system, get_external_api
 
 async def process_message(message: IncomingMessage, conversation_id):
@@ -56,8 +56,6 @@ async def process_message(message: IncomingMessage, conversation_id):
         return
 
 async def receive_message(messageData: IncomingMessage, background_tasks: BackgroundTasks):
-    print('mensagem recebida')
-
     # Obter instâncias
     supabase_manager = get_supabase_manager()
 
@@ -90,30 +88,3 @@ async def receive_message(messageData: IncomingMessage, background_tasks: Backgr
     except Exception as e:
         print(f"Erro ao processar mensagem: {e}")
         return {"status": "error", "message": f"Erro ao processar mensagem: {str(e)}"}
-
-async def receive_wts_webhook(webhook_data: WtsWebhookMessage, background_tasks: BackgroundTasks):
-    """Recebe webhook do WTS e processa a mensagem"""
-    print('Webhook do WTS recebido')
-    
-    # Verificar se é uma mensagem recebida
-    if webhook_data.eventType != "MESSAGE_RECEIVED":
-        return {"status": "ignored", "message": f"Evento ignorado: {webhook_data.eventType}"}
-    
-    # Verificar se é uma mensagem de texto
-    if webhook_data.content.type != "TEXT":
-        return {"status": "ignored", "message": f"Tipo de mensagem ignorado: {webhook_data.content.type}"}
-    
-    # Verificar se é uma mensagem recebida (não enviada)
-    if webhook_data.content.direction != "FROM_HUB":
-        return {"status": "ignored", "message": f"Direção ignorada: {webhook_data.content.direction}"}
-    
-    # Converter webhook para formato interno
-    try:
-        message_data = convert_wts_webhook_to_incoming_message(webhook_data)
-        print(f"Mensagem convertida: {message_data.phone_number} - {message_data.message}")
-    except Exception as e:
-        print(f"Erro ao converter webhook: {e}")
-        return {"status": "error", "message": f"Erro ao converter webhook: {str(e)}"}
-    
-    # Processar mensagem usando a função existente
-    return await receive_message(message_data, background_tasks)

@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Dict, Any
 from fastapi import APIRouter, BackgroundTasks
 from datetime import datetime
-from controllers.messages import receive_message, receive_wts_webhook
-from models.schemas import IncomingMessage, OutgoingMessage, WtsWebhookMessage
-from config import get_supabase_manager, get_rag_system
+from controllers.messages import receive_message
+from models.schemas import IncomingMessage
+from config import get_supabase_manager, get_rag_system, get_external_api
 
 router = APIRouter()
 
@@ -61,16 +61,43 @@ async def health_check():
 
 @router.post("/message")
 async def receive_message_endpoint(message: IncomingMessage, background_tasks: BackgroundTasks):
-    print('mensagem recebida no endpoint')
     result = await receive_message(message, background_tasks)
     return result
 
 @router.post("/webhook/wts")
-async def receive_wts_webhook_endpoint(webhook: WtsWebhookMessage, background_tasks: BackgroundTasks):
-    """Endpoint para receber webhooks do WTS"""
-    print('Webhook do WTS recebido no endpoint')
-    result = await receive_wts_webhook(webhook, background_tasks)
-    return result
+async def receive_wts_webhook_endpoint(webhook_data: Dict[str, Any], background_tasks: BackgroundTasks):    
+    try:
+        # Extrair dados do webhook
+        contact = webhook_data.get("contact", {})
+        last_message = webhook_data.get("lastMessage", {})
+        
+        # Extrair número do telefone
+        phone_number = contact.get("phonenumber", "").replace("+55|", "")
+        
+        # Extrair mensagem
+        message_text = webhook_data.get("lastContactMessage", "")
+        
+        # Extrair ID da mensagem
+        message_id = last_message.get("id", "")
+        
+        # Extrair nome do usuário
+        user_name = contact.get("name", "")
+        
+        # Criar IncomingMessage
+        message_data = IncomingMessage(
+            phone_number=phone_number,
+            message=message_text,
+            message_id=message_id,
+            user_name=user_name
+        )
+        
+        # Processar mensagem
+        result = await receive_message(message_data, background_tasks)
+        return result
+        
+    except Exception as e:
+        print(f"Erro ao processar webhook: {e}")
+        return {"status": "error", "message": f"Erro ao processar webhook: {str(e)}"}
 
 @router.post("/knowledge")
 async def add_knowledge_endpoint(documents: List[str], source: str = "manual"):

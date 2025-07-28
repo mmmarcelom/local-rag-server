@@ -2,41 +2,69 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime
 
-# Schema para o webhook do WTS
-class WtsWebhookContent(BaseModel):
+# Schema para o webhook real do WTS
+class WtsSession(BaseModel):
     id: str
-    senderId: Optional[str] = None
     createdAt: str
-    updatedAt: str
-    editedAt: Optional[str] = None
+    departmentId: str
+    userId: str
+    number: str
+    utm: Optional[str] = None
+
+class WtsChannel(BaseModel):
+    id: str
+    key: str
+    platform: str
+    displayName: str
+
+class WtsContact(BaseModel):
+    id: str
+    name: str
+    first_name: Optional[str] = None
+    phonenumber: str
+    display_phonenumber: str
+    email: Optional[str] = None
+    instagram: Optional[str] = None
+    tags: Optional[Any] = None
+    annotation: str
+    metadata: Dict[str, Any]
+    rg: Optional[str] = None
+    cep: Optional[str] = None
+    pa_s: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    cpf_62: Optional[str] = None
+    estado: Optional[str] = None
+    profiss_o: Optional[str] = None
+    complemento: Optional[str] = None
+    endere_o_53: Optional[str] = None
+    estado_civil: Optional[str] = None
+
+class WtsLastMessage(BaseModel):
+    id: str
+    createdAt: str
     type: str
-    active: bool
-    sessionId: str
-    templateId: Optional[str] = None
-    userId: Optional[str] = None
-    timestamp: str
     text: str
-    direction: str
-    status: str
-    origin: str
-    readContactAt: Optional[str] = None
     fileId: Optional[str] = None
-    refId: Optional[str] = None
-    waitingOptIn: bool
-    details: Dict[str, Any]
+    file: Optional[Any] = None
 
-class WtsWebhookDetails(BaseModel):
-    file: Optional[Dict[str, Any]] = None
-    location: Optional[Dict[str, Any]] = None
-    contact: Optional[Dict[str, Any]] = None
-    errors: Optional[Dict[str, Any]] = None
-    transcription: Optional[Dict[str, Any]] = None
+class WtsLastMessagesAggregated(BaseModel):
+    text: str
+    files: list
 
-class WtsWebhookMessage(BaseModel):
-    eventType: str
-    date: str
-    content: WtsWebhookContent
-    changeMetadata: Optional[Dict[str, Any]] = None
+class WtsWebhookData(BaseModel):
+    responseKeys: list
+    sessionId: str
+    session: WtsSession
+    channel: WtsChannel
+    contact: WtsContact
+    questions: Dict[str, Any]
+    menus: Dict[str, Any]
+    templates: Dict[str, Any]
+    metadata: Dict[str, Any]
+    lastContactMessage: str
+    lastMessage: WtsLastMessage
+    lastMessagesAggregated: WtsLastMessagesAggregated
 
 # Schema simplificado para uso interno (mantém compatibilidade)
 class IncomingMessage(BaseModel):
@@ -52,16 +80,15 @@ class OutgoingMessage(BaseModel):
     conversation_id: Optional[str] = None
 
 # Função utilitária para converter webhook do WTS para formato interno
-def convert_wts_webhook_to_incoming_message(webhook: WtsWebhookMessage) -> IncomingMessage:
+def convert_wts_webhook_to_incoming_message(webhook: WtsWebhookData) -> IncomingMessage:
     """Converte webhook do WTS para formato interno"""
-    # Extrair número do telefone do sessionId ou outros campos
-    # Por enquanto, vamos usar o sessionId como identificador
-    phone_number = webhook.content.sessionId
+    # Extrair número do telefone do contato
+    phone_number = webhook.contact.phonenumber.replace("+55|", "")
     
     return IncomingMessage(
         phone_number=phone_number,
-        message=webhook.content.text,
-        message_id=webhook.content.id,
-        timestamp=webhook.content.timestamp,
-        user_name=None  # Pode ser extraído de outros campos se disponível
+        message=webhook.lastContactMessage,
+        message_id=webhook.lastMessage.id,
+        timestamp=webhook.lastMessage.createdAt,
+        user_name=webhook.contact.name
     ) 

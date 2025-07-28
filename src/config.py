@@ -37,7 +37,7 @@ REDIS_PORT = os.getenv("REDIS_PORT")
 
 # Configurações do servidor
 SERVER_HOST = os.getenv("SERVER_HOST")
-SERVER_PORT = os.getenv("SERVER_PORT")
+SERVER_PORT = int(os.getenv("SERVER_PORT"))
 
 _supabase_manager = None
 _rag_system = None

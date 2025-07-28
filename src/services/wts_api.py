@@ -1,5 +1,6 @@
 import httpx
 import logging
+from models.schemas import IncomingMessage
 
 logger = logging.getLogger(__name__)
 

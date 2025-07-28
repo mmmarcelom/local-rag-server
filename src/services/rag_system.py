@@ -167,7 +167,7 @@ class RAGSystem:
                 return documents
                 
             except Exception as e:
-                logger.error(f"Erro na busca no Qdrant: {e}")
+                logger.error(f"\nErro na busca no Qdrant: {e}\n")
                 return []
                 
         except Exception as e:
