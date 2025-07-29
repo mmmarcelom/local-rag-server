@@ -66,29 +66,13 @@ class WtsWebhookData(BaseModel):
     lastMessage: WtsLastMessage
     lastMessagesAggregated: WtsLastMessagesAggregated
 
-# Schema simplificado para uso interno (mantém compatibilidade)
-class IncomingMessage(BaseModel):
-    phone_number: str
-    message: str
-    message_id: str
-    timestamp: Optional[str] = None
-    user_name: Optional[str] = None
-
-class OutgoingMessage(BaseModel):
-    phone_number: str
-    message: str
-    conversation_id: Optional[str] = None
-
-# Função utilitária para converter webhook do WTS para formato interno
-def convert_wts_webhook_to_incoming_message(webhook: WtsWebhookData) -> IncomingMessage:
-    """Converte webhook do WTS para formato interno"""
-    # Extrair número do telefone do contato
-    phone_number = webhook.contact.phonenumber.replace("+55|", "")
-    
-    return IncomingMessage(
-        phone_number=phone_number,
-        message=webhook.lastContactMessage,
-        message_id=webhook.lastMessage.id,
-        timestamp=webhook.lastMessage.createdAt,
-        user_name=webhook.contact.name
-    ) 
+class Message(BaseModel):
+    id: str
+    conversation_id: str
+    platform: str
+    sender: str
+    receiver: str
+    content: str
+    direction: str
+    timestamp: str
+    type: str

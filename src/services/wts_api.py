@@ -1,6 +1,6 @@
 import httpx
 import logging
-from models.schemas import IncomingMessage
+from models.schemas import Message
 
 logger = logging.getLogger(__name__)
 
@@ -45,22 +45,26 @@ class WtsAPIService:
             logger.error(f"❌ Erro ao conectar com WTS API: {e}")
             return False
     
-    async def send_message(self, phone_number: str, message: str, metadata: dict = None) -> bool:
+    async def send_message(self, message: Message) -> bool:
         try:
-            payload = { "body": {"text": message}, "to": phone_number }
+            payload = { 
+                "body": {"text": message.content}, 
+                "to": message.receiver,
+                "from": message.sender
+            }
 
-            if metadata:
-                payload["metadata"] = metadata
+            if message.metadata:
+                payload["metadata"] = message.metadata
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 url = f"{self.api_url}/chat/v1/message/send"
                 response = await client.post(url, json=payload, headers=self.headers)
             if response.status_code == 200:
-                logger.info(f"Mensagem enviada para {phone_number}")
+                logger.info(f"WTS: mensagem enviada")
                 return True
             else:
-                logger.error(f"Erro ao enviar mensagem: {response.status_code} - {response.text}")
+                logger.error(f"WTS: erro ao enviar mensagem: {response.status_code} - {response.text}")
                 return False
         except Exception as e:
-            logger.error(f"Erro ao enviar mensagem: {e}")
+            logger.error(f"WTS: erro ao enviar mensagem: {e}")
             return False

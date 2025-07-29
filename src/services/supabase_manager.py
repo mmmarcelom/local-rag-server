@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 import requests
+from models.schemas import Message
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from supabase import create_client, Client
@@ -70,17 +71,23 @@ class SupabaseManager:
             logger.error(f"Erro ao gerenciar conversa: {e}")
             raise ConnectionError(f"Erro ao gerenciar conversa no Supabase: {e}")
     
-    async def save_message(self, conversation_id: str, phone_number: str, message: str, message_type: str, message_id: str = None, metadata: dict = None):
-        message_data = {
+    def message_to_json(self, message: Message):
+        return {
             "id": str(uuid.uuid4()),
-            "conversation_id": conversation_id,
-            "phone_number": phone_number,
-            "message": message,
-            "message_type": message_type,
-            "external_message_id": message_id,
-            "metadata": metadata or {},
+            "conversation_id": message.conversation_id,
+            "platform": message.platform,
+            "sender": message.sender,
+            "receiver": message.receiver,
+            "message_type": message.message_type,
+            "external_message_id": message.id,
+            "content": message.content,
+            "metadata": message.metadata or {},
+            "direction": message.direction,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+
+    async def save_message(self, message: Message):
+        message_data = self.message_to_json(message)
         
         try:
             result = self.supabase.table("messages").insert(message_data).execute()
