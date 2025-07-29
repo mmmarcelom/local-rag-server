@@ -6,6 +6,8 @@ from config import get_supabase_manager, get_rag_system, get_external_api
 
 async def process_message(incoming_message: Message, conversation_id):
     """Processa mensagem em background"""
+    print(f"🔄 Iniciando processamento em background para {incoming_message.sender}")
+    
     # Obter instâncias
     supabase_manager = get_supabase_manager()
     rag_system = get_rag_system()
@@ -72,22 +74,32 @@ async def process_message(incoming_message: Message, conversation_id):
         return
 
 async def receive_webhook(webhook_data: WtsWebhookData, background_tasks: BackgroundTasks):
+    print("🚀 Iniciando processamento do webhook...")
     # Obter instâncias
     supabase_manager = get_supabase_manager()
     try:
-        if webhook_data.channel.platform == "whatsapp":
+        if webhook_data.channel.platform.lower() == "whatsapp":
+            print(f"📱 Processando mensagem WhatsApp")
+            print(f"👤 Sender: {webhook_data.contact.phonenumber}")
+            print(f"📞 Receiver: {webhook_data.channel.key}")
+            print(f"💬 Content: {webhook_data.lastContactMessage}")
+            
+            # Limpar o número de telefone
+            contact_phone = webhook_data.contact.phonenumber.replace("+55|", "").replace("+55", "")
+            
             incoming_message = Message(
                 id=webhook_data.lastMessage.id,
                 conversation_id="",  # Será definido depois
                 platform="whatsapp",
-                sender=webhook_data.contact.phonenumber,
-                receiver=webhook_data.channel.number,
+                sender=contact_phone,
+                receiver=webhook_data.channel.key,
                 content=webhook_data.lastContactMessage,
                 message_type="text",
                 direction="incoming"
             )
 
-            conversation_id = await supabase_manager.get_or_create_conversation(incoming_message.sender)
+            print(f"✅ Message criada com sucesso")
+            conversation_id = await supabase_manager.get_or_create_conversation(contact_phone)
             
             # 2. Atualizar conversation_id na mensagem
             incoming_message.conversation_id = conversation_id
@@ -96,11 +108,15 @@ async def receive_webhook(webhook_data: WtsWebhookData, background_tasks: Backgr
             await supabase_manager.save_message(incoming_message)
 
     except Exception as e:
-        print(f"Erro ao buscar ou criar conversa: {e}")
+        print(f"❌ Erro ao buscar ou criar conversa: {e}")
+        import traceback
+        print(f"📋 Traceback: {traceback.format_exc()}")
         return {"status": "error", "message": f"Erro ao buscar ou criar conversa: {str(e)}"}
 
     try:
+        print("🔄 Adicionando tarefa em background...")
         background_tasks.add_task(process_message, incoming_message, conversation_id)
+        print("✅ Tarefa adicionada com sucesso")
         return {"status": "success", "message": "Mensagem adicionada para processamento em background"}
 
     except Exception as e:

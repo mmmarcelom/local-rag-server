@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, BackgroundTasks
 from datetime import datetime
 from controllers.messages import receive_webhook
-from models.schemas import WhatsappMessage, WtsWebhookData
+from models.schemas import WtsWebhookData, Message
 from config import get_supabase_manager, get_rag_system, get_external_api
 import asyncio
 
@@ -16,7 +16,6 @@ async def hello():
         "timestamp": datetime.now().isoformat(),
         "endpoints": {
             "docs": "/docs",
-            "message": "/message",
             "webhook": "/webhook/wts",
             "conversation": "/conversation/{phone_number}",
             "knowledge": "/knowledge",
@@ -134,12 +133,19 @@ async def test_all_services():
         }
 
 @router.post("/message")
-async def receive_message_endpoint(message: WhatsappMessage, background_tasks: BackgroundTasks):
+async def receive_message_endpoint(message: Message):
     return get_external_api().send_message(message)
 
 @router.post("/webhook/wts")
 async def receive_wts_webhook_endpoint(webhook_data: WtsWebhookData, background_tasks: BackgroundTasks):    
-    return await receive_webhook(webhook_data, background_tasks)
+    try:
+        print(f"📥 Webhook recebido: {webhook_data.channel.platform}")
+        print(f"👤 Contato: {webhook_data.contact.name}")
+        print(f"💬 Mensagem: {webhook_data.lastContactMessage}")
+        return await receive_webhook(webhook_data, background_tasks)
+    except Exception as e:
+        print(f"❌ Erro no webhook: {e}")
+        return {"status": "error", "message": str(e)}
 
 @router.post("/knowledge")
 async def add_knowledge_endpoint(documents: List[str], source: str = "manual"):

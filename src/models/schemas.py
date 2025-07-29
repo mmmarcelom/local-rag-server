@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, Literal
 from datetime import datetime
 
@@ -14,15 +14,15 @@ class WtsSession(BaseModel):
 class WtsChannel(BaseModel):
     id: str
     key: str
-    platform: str
+    platform: str  # Pode vir como "WhatsApp", "whatsapp", etc.
     displayName: str
 
 class WtsContact(BaseModel):
     id: str
     name: str
-    first_name: Optional[str] = None
+    first_name: Optional[str] = Field(None, alias="first-name")
     phonenumber: str
-    display_phonenumber: str
+    display_phonenumber: str = Field(alias="display-phonenumber")
     email: Optional[str] = None
     instagram: Optional[str] = None
     tags: Optional[Any] = None
@@ -30,7 +30,7 @@ class WtsContact(BaseModel):
     metadata: Dict[str, Any]
     rg: Optional[str] = None
     cep: Optional[str] = None
-    pa_s: Optional[str] = None
+    pa_s: Optional[str] = Field(None, alias="pa-s")
     bairro: Optional[str] = None
     cidade: Optional[str] = None
     cpf_62: Optional[str] = None

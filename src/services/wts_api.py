@@ -47,24 +47,50 @@ class WtsAPIService:
     
     async def send_message(self, message: Message) -> bool:
         try:
+            logger.info(f"📤 Enviando mensagem via WTS API...")
+            logger.info(f"📞 Para (original): {message.receiver}")
+            logger.info(f"📞 De (original): {message.sender}")
+            logger.info(f"💬 Conteúdo: {message.content}")
+            
+            # Formatar números de telefone para o formato esperado pela WTS API
+            to_number = message.receiver
+            from_number = message.sender
+            
+            # Se o número não tem o formato +55, adicionar
+            if not to_number.startswith("+55"):
+                to_number = f"+55{to_number}"
+            if not from_number.startswith("+55"):
+                from_number = f"+55{from_number}"
+            
             payload = { 
                 "body": {"text": message.content}, 
-                "to": message.receiver,
-                "from": message.sender
+                "to": to_number,
+                "from": from_number
             }
+            
+            logger.info(f"📞 Para (formatado): {to_number}")
+            logger.info(f"📞 De (formatado): {from_number}")
 
             if message.metadata:
                 payload["metadata"] = message.metadata
 
+            logger.info(f"📦 Payload: {payload}")
+
             async with httpx.AsyncClient(timeout=30.0) as client:
                 url = f"{self.api_url}/chat/v1/message/send"
                 response = await client.post(url, json=payload, headers=self.headers)
+                
+            logger.info(f"📡 Response status: {response.status_code}")
+            logger.info(f"📡 Response text: {response.text}")
+                
             if response.status_code == 200:
-                logger.info(f"WTS: mensagem enviada")
+                logger.info(f"✅ WTS: mensagem enviada com sucesso")
                 return True
             else:
-                logger.error(f"WTS: erro ao enviar mensagem: {response.status_code} - {response.text}")
+                logger.error(f"❌ WTS: erro ao enviar mensagem: {response.status_code} - {response.text}")
                 return False
         except Exception as e:
-            logger.error(f"WTS: erro ao enviar mensagem: {e}")
+            logger.error(f"❌ WTS: erro ao enviar mensagem: {e}")
+            import traceback
+            logger.error(f"📋 Traceback: {traceback.format_exc()}")
             return False

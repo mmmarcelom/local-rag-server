@@ -134,7 +134,7 @@ class RAGSystem:
             # Preparar query de busca
             search_query = query
             if conversation_history:
-                recent_messages = [msg["message"] for msg in conversation_history[-3:]]
+                recent_messages = [msg["content"] for msg in conversation_history[-3:]]
                 search_query = f"{query} {' '.join(recent_messages)}"
                 logger.info(f"Query expandida com histórico: '{search_query}'")
             
@@ -182,8 +182,8 @@ class RAGSystem:
             history_text = ""
             if conversation_history:
                 for msg in conversation_history[-5:]:
-                    role = "Cliente" if msg["message_type"] == "incoming" else "Assistente"
-                    history_text += f"{role}: {msg['message']}\n"
+                    role = "Cliente" if msg["direction"] == "incoming" else "outgoing"
+                    history_text += f"{role}: {msg['content']}\n"
             prompt = f"""
             Você é um assistente virtual prestativo e amigável que responde mensagens de WhatsApp.
             

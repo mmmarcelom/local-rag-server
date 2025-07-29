@@ -58,7 +58,19 @@ async def process_message_async(
         response = await rag_system.generate_response(task.message, context, conversation_history)
         
         # 5. Enviar resposta via API externa
-        success = await external_api.send_message(phone_number=phone_number, message=response, metadata={"conversation_id": conversation_id})
+        from models.schemas import Message
+        response_message = Message(
+            id=str(uuid.uuid4()),
+            conversation_id=conversation_id,
+            platform="whatsapp",
+            sender="bot",
+            receiver=phone_number,
+            content=response,
+            direction="outgoing",
+            message_type="text",
+            metadata={"conversation_id": conversation_id}
+        )
+        success = await external_api.send_message(response_message)
         
         if success:
             # 6. Salvar resposta enviada
