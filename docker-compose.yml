@@ -67,6 +67,22 @@ services:
     networks:
       - local-rag-network
 
+  # Ngrok tunnel
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: rag-ngrok-tunnel
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+      - NGROK_TUNNEL=${NGROK_TUNNEL}
+    command: ["http", "server:8000", "--url=${NGROK_TUNNEL}"]
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - local-rag-network
+
 networks:
   local-rag-network:
     driver: bridge

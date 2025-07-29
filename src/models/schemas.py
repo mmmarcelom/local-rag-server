@@ -10,12 +10,18 @@ class WtsSession(BaseModel):
     userId: str
     number: str
     utm: Optional[str] = None
+    
+    class Config:
+        extra = "ignore"
 
 class WtsChannel(BaseModel):
     id: str
     key: str
     platform: str  # Pode vir como "WhatsApp", "whatsapp", etc.
     displayName: str
+    
+    class Config:
+        extra = "ignore"
 
 class WtsContact(BaseModel):
     id: str
@@ -25,20 +31,12 @@ class WtsContact(BaseModel):
     display_phonenumber: str = Field(alias="display-phonenumber")
     email: Optional[str] = None
     instagram: Optional[str] = None
-    tags: Optional[Any] = None
-    annotation: str
+    tags: Optional[list] = None
+    annotation: Optional[str] = None
     metadata: Dict[str, Any]
-    rg: Optional[str] = None
-    cep: Optional[str] = None
-    pa_s: Optional[str] = Field(None, alias="pa-s")
-    bairro: Optional[str] = None
-    cidade: Optional[str] = None
-    cpf_62: Optional[str] = None
-    estado: Optional[str] = None
-    profiss_o: Optional[str] = None
-    complemento: Optional[str] = None
-    endere_o_53: Optional[str] = None
-    estado_civil: Optional[str] = None
+    
+    class Config:
+        extra = "ignore"
 
 class WtsLastMessage(BaseModel):
     id: str
@@ -47,10 +45,16 @@ class WtsLastMessage(BaseModel):
     text: str
     fileId: Optional[str] = None
     file: Optional[Any] = None
+    
+    class Config:
+        extra = "ignore"
 
 class WtsLastMessagesAggregated(BaseModel):
     text: str
     files: list
+    
+    class Config:
+        extra = "ignore"
 
 class WtsWebhookData(BaseModel):
     responseKeys: list
@@ -65,6 +69,9 @@ class WtsWebhookData(BaseModel):
     lastContactMessage: str
     lastMessage: WtsLastMessage
     lastMessagesAggregated: WtsLastMessagesAggregated
+    
+    class Config:
+        extra = "ignore"
 
 class Message(BaseModel):
     id: str
@@ -77,3 +84,6 @@ class Message(BaseModel):
     message_type: Literal['text', 'audio', 'video']
     timestamp: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    
+    class Config:
+        extra = "ignore"
