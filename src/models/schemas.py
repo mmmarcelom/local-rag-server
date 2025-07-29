@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
 from datetime import datetime
 
 # Schema para o webhook real do WTS
@@ -73,6 +73,7 @@ class Message(BaseModel):
     sender: str
     receiver: str
     content: str
-    direction: str
-    timestamp: str
-    type: str
+    direction: Literal['incoming', 'outgoing']
+    message_type: Literal['text', 'audio', 'video']
+    timestamp: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None

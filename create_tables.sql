@@ -20,7 +20,8 @@ CREATE TABLE messages (
     sender VARCHAR(20) NOT NULL,
     receiver VARCHAR(20) NOT NULL,
     content TEXT NOT NULL,
-    message_type VARCHAR(20) NOT NULL, -- 'incoming' ou 'outgoing'
+    direction VARCHAR(20) NOT NULL, -- 'incoming' ou 'outgoing'
+    message_type VARCHAR(20) NOT NULL, -- 'text', 'audio', 'video'
     external_message_id VARCHAR(100),
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

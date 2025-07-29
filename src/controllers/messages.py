@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from fastapi import BackgroundTasks
 from models.schemas import WtsWebhookData, Message
@@ -10,7 +11,7 @@ async def process_message(incoming_message: Message, conversation_id):
     rag_system = get_rag_system()
     external_api = get_external_api()
 
-    log_prefix = incoming_message.from_number
+    log_prefix = incoming_message.sender
     
     # 1. Buscar histórico
     try:
@@ -42,12 +43,14 @@ async def process_message(incoming_message: Message, conversation_id):
     # 5. Salvar resposta
     try:
         outgoing_message = Message(
+            id=str(uuid.uuid4()),
             conversation_id=incoming_message.conversation_id,
-            plataform="whatsapp",
-            sender=incoming_message.to_number,
-            receiver=incoming_message.from_number,
+            platform="whatsapp",
+            sender=incoming_message.receiver,  # O bot envia para quem recebeu
+            receiver=incoming_message.sender,  # O bot responde para quem enviou
             content=generated_response,
-            direction="outgoing"
+            direction="outgoing",
+            message_type="text"
             )
             
         print(f"{log_prefix} - Salvando resposta...", end="")
@@ -75,14 +78,21 @@ async def receive_webhook(webhook_data: WtsWebhookData, background_tasks: Backgr
         if webhook_data.channel.platform == "whatsapp":
             incoming_message = Message(
                 id=webhook_data.lastMessage.id,
+                conversation_id="",  # Será definido depois
+                platform="whatsapp",
                 sender=webhook_data.contact.phonenumber,
                 receiver=webhook_data.channel.number,
                 content=webhook_data.lastContactMessage,
+                message_type="text",
+                direction="incoming"
             )
 
             conversation_id = await supabase_manager.get_or_create_conversation(incoming_message.sender)
             
-            # 2. Salvar mensagem recebida
+            # 2. Atualizar conversation_id na mensagem
+            incoming_message.conversation_id = conversation_id
+            
+            # 3. Salvar mensagem recebida
             await supabase_manager.save_message(incoming_message)
 
     except Exception as e:

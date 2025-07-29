@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Set, Any
@@ -36,13 +37,18 @@ async def process_message_async(
         conversation_id = await supabase_manager.get_or_create_conversation(phone_number, task.user_name)
         
         # 2. Salvar mensagem recebida
-        await supabase_manager.save_message(
+        from models.schemas import Message
+        incoming_message = Message(
+            id=task.message_id,
             conversation_id=conversation_id,
-            phone_number=phone_number,
-            message=task.message,
-            message_type="incoming",
-            message_id=task.message_id
+            platform="whatsapp",
+            sender=phone_number,
+            receiver="bot",
+            content=task.message,
+            direction="incoming",
+            message_type="text"
         )
+        await supabase_manager.save_message(incoming_message)
         
         # 3. Recuperar histórico da conversa
         conversation_history = await supabase_manager.get_conversation_history(conversation_id)
@@ -56,12 +62,17 @@ async def process_message_async(
         
         if success:
             # 6. Salvar resposta enviada
-            await supabase_manager.save_message(
+            outgoing_message = Message(
+                id=str(uuid.uuid4()),
                 conversation_id=conversation_id,
-                phone_number=phone_number,
-                message=response,
-                message_type="outgoing"
+                platform="whatsapp",
+                sender="bot",
+                receiver=phone_number,
+                content=response,
+                direction="outgoing",
+                message_type="text"
             )
+            await supabase_manager.save_message(outgoing_message)
             
             # 7. Atualizar conversa
             await supabase_manager.update_conversation(
