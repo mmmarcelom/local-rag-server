@@ -1,6 +1,10 @@
 -- Script para criar as novas tabelas no Supabase
 -- Execute este script no SQL Editor do Supabase
 
+-- 1. Remover tabelas existentes (se existirem)
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS conversations CASCADE;
+
 -- Criar tabela de conversas
 CREATE TABLE conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

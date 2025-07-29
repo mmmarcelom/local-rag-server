@@ -1,5 +1,44 @@
-name: local-rag-infra
+name: local-rag-app
+
 services:
+  # Servidor FastAPI
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
+      - ANON_KEY=${ANON_KEY}
+      - WTS_API_TOKEN=${WTS_API_TOKEN}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+      - OLLAMA_HOST=ollama
+      - OLLAMA_PORT=11434
+      - OLLAMA_URL=http://ollama:11434
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - HF_HOME=/home/appuser/.cache/huggingface
+      - TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/transformers
+      - HF_DATASETS_CACHE=/home/appuser/.cache/huggingface/datasets
+    depends_on:
+      - qdrant
+      - redis
+      - ollama
+    networks:
+      - local-rag-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant

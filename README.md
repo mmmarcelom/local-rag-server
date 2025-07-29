@@ -38,8 +38,16 @@ copy env.example .env
 cp env.example .env
 ```
 
-### 3. Edite o arquivo .env
-Configure as seguintes variáveis no arquivo `.env`:
+### 3. Configure as variáveis de ambiente
+
+#### **Opção A: Arquivo .env (Recomendado)**
+```bash
+# Copiar arquivo de exemplo
+cp env.example .env
+
+# Editar o arquivo .env
+# Configure as seguintes variáveis OBRIGATÓRIAS:
+```
 
 ```bash
 # Configurações do WhatsApp API (WTS.chat) - OBRIGATÓRIO
@@ -48,22 +56,114 @@ WTS_API_TOKEN=your_wts_api_token_here
 # Configurações do Supabase (OBRIGATÓRIO)
 SUPABASE_PUBLIC_URL=your_supabase_url_here
 ANON_KEY=your_supabase_anon_key_here
+```
 
-# As outras configurações já vêm com valores padrão para desenvolvimento
+#### **Opção B: Scripts de Build Automatizados**
+
+**Linux/Mac:**
+```bash
+# Build de produção
+chmod +x build.sh
+./build.sh
+
+# Build de desenvolvimento
+chmod +x build-dev.sh
+./build-dev.sh
+```
+
+**Windows:**
+```cmd
+# Build de produção
+build.bat
+
+# Build de desenvolvimento
+build-dev.bat
+```
+
+#### **Opção C: Variáveis de ambiente no Docker**
+```bash
+docker run --name local-rag-server \
+  -d \
+  -p 8001:8001 \
+  -e SUPABASE_PUBLIC_URL=your_supabase_url \
+  -e ANON_KEY=your_supabase_key \
+  -e WTS_API_TOKEN=your_wts_token \
+  local-rag-server
 ```
 
 **⚠️ Importante**: Você precisa obter um token da API WTS.chat para que o WhatsApp funcione.
 
+### **📋 Variáveis de Ambiente Disponíveis**
+
+#### **Variáveis Obrigatórias:**
+- `SUPABASE_PUBLIC_URL`: URL do seu projeto Supabase
+- `ANON_KEY`: Chave anônima do Supabase
+- `WTS_API_TOKEN`: Token da API WTS.chat
+
+#### **Variáveis Opcionais (com valores padrão):**
+- `OLLAMA_MODEL`: Modelo do Ollama (padrão: `llama3.2`)
+- `OLLAMA_HOST`: Host do Ollama (padrão: `ollama`)
+- `OLLAMA_PORT`: Porta do Ollama (padrão: `11434`)
+- `OLLAMA_URL`: URL completa do Ollama (padrão: `http://ollama:11434`)
+- `SERVER_HOST`: Host do servidor (padrão: `0.0.0.0`)
+- `SERVER_PORT`: Porta do servidor (padrão: `8001`)
+- `QDRANT_HOST`: Host do Qdrant (padrão: `localhost`)
+- `QDRANT_PORT`: Porta do Qdrant (padrão: `6333`)
+- `HF_HOME`: Cache do Hugging Face (padrão: `/home/appuser/.cache/huggingface`)
+- `TRANSFORMERS_CACHE`: Cache dos transformers (padrão: `/home/appuser/.cache/huggingface/transformers`)
+- `HF_DATASETS_CACHE`: Cache dos datasets (padrão: `/home/appuser/.cache/huggingface/datasets`)
+
 ### 4. Escolha o modo de execução
 
-#### **Modo Teste (1 Ollama - Recomendado para desenvolvimento)**
+#### **Opção A: Scripts Automatizados (Recomendado)**
+
+**Linux/Mac:**
+```bash
+# Dar permissão de execução
+chmod +x start.sh stop.sh
+
+# Iniciar serviços
+./start.sh single          # Modo desenvolvimento (1 Ollama)
+./start.sh multi           # Modo produção (3 Ollamas + Load Balancer)
+./start.sh dev             # Modo desenvolvimento com hot reload
+./start.sh local           # Com PostgreSQL local
+
+# Parar serviços
+./stop.sh
+```
+
+**Windows:**
+```cmd
+# Iniciar serviços
+start.bat single           # Modo desenvolvimento (1 Ollama)
+start.bat multi            # Modo produção (3 Ollamas + Load Balancer)
+start.bat dev              # Modo desenvolvimento com hot reload
+start.bat local            # Com PostgreSQL local
+
+# Parar serviços
+stop.bat
+```
+
+#### **Opção B: Comandos Docker Compose Diretos**
+
+**Modo Desenvolvimento (1 Ollama):**
 ```bash
 docker-compose --profile single-ollama up -d
 ```
 
-#### **Modo Produção (3 Ollamas + Load Balancer)**
+**Modo Produção (3 Ollamas + Load Balancer):**
 ```bash
 docker-compose --profile multi-ollama up -d
+```
+
+**Modo Desenvolvimento com Hot Reload:**
+```bash
+docker-compose --profile development up -d
+```
+
+**Com PostgreSQL Local:**
+```bash
+docker-compose --profile local-db up -d
 ```
 
 ### 5. Verificar se tudo está funcionando
@@ -75,7 +175,7 @@ docker-compose ps
 docker-compose logs -f
 
 # Acessar documentação da API
-# http://localhost:8000/docs
+# http://localhost:8001/docs
 ```
 
 ## 🖥️ **Execução Local (sem Docker)**
@@ -273,11 +373,11 @@ REDIS_PORT=6379
 
 # Servidor
 SERVER_HOST=0.0.0.0
-SERVER_PORT=8000
+SERVER_PORT=8001
 ```
 
 ### **Portas Utilizadas**
-- **8000**: FastAPI Server
+- **8001**: FastAPI Server
 - **6333**: Qdrant (Vetores)
 - **6379**: Redis (Cache)
 - **54322**: Supabase (PostgreSQL)
@@ -289,7 +389,7 @@ SERVER_PORT=8000
 ### **Teste de Saúde**
 ```bash
 # Verificar se todos os serviços estão rodando
-curl http://localhost:8000/docs
+curl http://localhost:8001/docs
 curl http://localhost:6333/collections
 curl http://localhost:11434/api/tags
 
@@ -303,7 +403,7 @@ docker-compose logs --tail=50
 python test_all_services.py
 
 # Teste via API (retorna JSON detalhado)
-curl http://localhost:8000/test-services
+curl http://localhost:8001/test-services
 ```
 
 ### **Teste de Carga**
@@ -318,10 +418,10 @@ python monitor_load.py
 python test_all_services.py
 
 # Teste via API (JSON response)
-curl http://localhost:8000/test-services
+curl http://localhost:8001/test-services
 
 # Teste de health check básico
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
 
 **Exemplo de resposta do teste assíncrono:**
@@ -421,7 +521,7 @@ docker-compose build --no-cache && docker-compose --profile single-ollama up -d
 - [ ] Token WTS.chat configurado no `.env`
 - [ ] Configurações do Supabase configuradas no `.env`
 - [ ] Containers iniciados com sucesso (`docker-compose ps`)
-- [ ] API acessível em http://localhost:8000/docs
+- [ ] API acessível em http://localhost:8001/docs
 - [ ] Qdrant acessível em http://localhost:6333/collections
 - [ ] Ollama acessível em http://localhost:11434/api/tags
 - [ ] Logs sem erros críticos (`docker-compose logs`)

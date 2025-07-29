@@ -79,11 +79,11 @@ def check_services(results):
     
     if all_success:
         print("✅")
-        print(f"{'\n'.join(services)}")
+        print("\n".join(services))
         return True
     else:
         print("⚠️")
-        print(f"{'\n'.join(services)}")
+        print("\n".join(services))
         return False
 
 @asynccontextmanager
