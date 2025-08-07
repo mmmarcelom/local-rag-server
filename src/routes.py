@@ -153,3 +153,43 @@ async def add_knowledge_endpoint(documents: List[str], source: str = "manual"):
     from controllers.knowledge import add_knowledge
     result = await add_knowledge(documents, source)
     return result 
+
+@router.delete("/knowledge")
+async def clear_knowledge_endpoint():
+    """Limpa todos os dados da base de conhecimento"""
+    try:
+        print('🗑️ Limpando base de conhecimento...')
+        from config import get_rag_system
+        
+        rag_system = get_rag_system()
+        
+        # Verificar se o Qdrant está inicializado
+        if not rag_system.qdrant:
+            await rag_system.initialize_qdrant()
+        
+        if rag_system.qdrant:
+            # Deletar todos os pontos da coleção
+            rag_system.qdrant.delete(
+                collection_name=rag_system.collection_name,
+                points_selector={"all": True}
+            )
+            
+            print(f'✅ Base de conhecimento limpa com sucesso!')
+            return {
+                "status": "success",
+                "message": "Base de conhecimento limpa com sucesso",
+                "collection": rag_system.collection_name
+            }
+        else:
+            print('❌ Não foi possível conectar ao Qdrant')
+            return {
+                "status": "error",
+                "message": "Não foi possível conectar ao Qdrant"
+            }
+            
+    except Exception as e:
+        print(f'❌ Erro ao limpar base de conhecimento: {e}')
+        return {
+            "status": "error",
+            "message": str(e)
+        } 
